@@ -6,6 +6,10 @@ class Vector2D(object):
 		self.y = y
 
 	@classmethod
+	def from_list(cls, pos=(0,0)):
+		return cls(pos[0], pos[1])
+
+	@classmethod
 	def from_angle(cls, angle=0.0, magnitude=1.0):
 		return cls(cos(angle) * magnitude, sin(angle) * magnitude)
 
@@ -161,8 +165,8 @@ class Line(object):
 		   return None
 
 		d = (det(self.p1, self.p2), det(other.p1, other.p2))
-		x = det(d, dx) / div
-		y = det(d, dy) / div
+		x = det(d, dx) / float(div)
+		y = det(d, dy) / float(div)
 		return Vector2D(x, y)
 
 	def intersect_fast(self, other):
@@ -203,13 +207,19 @@ class OBB2D(object):
 		return self.p[key]
 
 	def __iter__(self):
-		return self.p
+		return iter(self.p)
 
 	def rotate(self, angle):
 		self.update_angle(self.angle + angle)
 
 	def translate(self, center):
 		self.update_center(center+self.center)
+
+	def update_size(self, w, h):
+		self.w = w
+		self.h = h
+
+		self.update_axes()
 
 	def update_angle(self, angle):
 		self.angle = angle % 360
@@ -324,30 +334,36 @@ def test():
 	screen = pygame.display.set_mode((600,400))
 	clock = pygame.time.Clock()
 
-	a = OBB2D(Vector2D(0,0), 1, 1, 0)
-	b = OBB2D(Vector2D(1,1), 1.5, 1, 45)
-	c = OBB2D(Vector2D(3,0), 1, 1, 90)
+	a = OBB2D(Vector2D(100,200), 100, 100, 0)
+	b = OBB2D(Vector2D(200,300), 150, 100, 30)
+	c = OBB2D(Vector2D(400,200), 100, 100, 90)
 
 	font = pygame.font.SysFont("monospace", 30)
 
 	frames = 0
+	realfps = FPS
 	while frames < 2400:
 		def renderOBB(obb, screen):
-			pygame.draw.aalines(screen, (0,0,0), True, map(lambda x: tuple(x*100+(100,200)),obb.p))
+			pygame.draw.lines(screen, (0,0,0), True, map(list,obb.p))
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				return
+			if event.type == pygame.MOUSEBUTTONDOWN:
+				if event.button == 4:
+					b.update_size(b.w + 2, b.h + 2)
+				if event.button == 5:
+					b.update_size(b.w - 2, b.h - 2)
 
 		screen.fill((255,255,255))
 
 		renderOBB(a, screen)
 		renderOBB(b, screen)
 		renderOBB(c, screen)
-
-		b.translate(Vector2D(0.002,0))
-		b.rotate(0.1)
+		
+		b.rotate(6.0/realfps)
+		b.update_center(Vector2D.from_list(pygame.mouse.get_pos()))
 
 		text = font.render(str(rr_collides(a,b)), True, (0,0,0))
 		screen.blit(text, [600/2-text.get_rect().width/2, 50])
@@ -357,6 +373,9 @@ def test():
 
 		pygame.display.flip()
 		clock.tick(FPS)
+		realfps = clock.get_fps()
+		if realfps == 0:
+			realfps = FPS
 		frames += 1
 
 	pygame.quit()
