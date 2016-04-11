@@ -29,9 +29,13 @@ class Circle(object):
 		return (other.center - self.center).squared_magnitude() <= (self.rs + other.rs)
 
 	def apply_impulse(self, impulse):
+		if not self.dynamic:
+			return
 		self.velocity += impulse
 
 	def update_physics(self):
+		if not self.dynamic:
+			return
 		self.center += velocity
 
 class Rectangle(OBB2D):
@@ -42,9 +46,13 @@ class Rectangle(OBB2D):
 		self.velocity = Vector2D(0,0)
 
 	def apply_impulse(self, impulse):
+		if not self.dynamic:
+			return
 		self.velocity += impulse
 
 	def update_physics(self):
+		if not self.dynamic:
+			return
 		self.center += velocity
 
 class OneWayPlatform(object):
