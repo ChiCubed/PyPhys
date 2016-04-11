@@ -71,3 +71,7 @@ class OneWayPlatform(object):
 	def update_normal(self):
 		self.normal = self.angle.rotated(90)
 		self.normal.normalize_ip()
+
+
+if __name__ == 'main':
+	test()
