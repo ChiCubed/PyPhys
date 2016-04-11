@@ -20,6 +20,19 @@ class Circle(object):
 		self.r = sqrt(r)
 		self.rs = rs
 
+	def scale(self, scale):
+		self.update_radius(self.radius * scale)
+
+	def update_radius(self, radius):
+		self.r = radius
+		self.rs = radius**2
+
+	def translate(self, vector):
+		self.update_center(self.center + vector)
+
+	def update_center(self, center):
+		self.center = center
+
 	def intersects(self, other):
 		"""
 		Check if this circle intersects another circle.
@@ -36,7 +49,7 @@ class Circle(object):
 	def update_physics(self):
 		if not self.dynamic:
 			return
-		self.center += velocity
+		self.translate(self.velocity)
 
 class Rectangle(OBB2D):
 	def __init__(self, center, w, h, angle = 0, dynamic = True):
@@ -53,7 +66,8 @@ class Rectangle(OBB2D):
 	def update_physics(self):
 		if not self.dynamic:
 			return
-		self.center += velocity
+		self.translate(self.velocity)
+		self.velocity /= 1.05 # Brute force coefficient
 
 class OneWayPlatform(object):
 	def __init__(self, p1, p2, dynamic=False):
@@ -77,10 +91,10 @@ def test():
 	from constants import FPS
 
 	pygame.init()
-	screen = pygame.display.set_mode((600,400))
+	screen = pygame.display.set_mode((800,600))
 	clock = pygame.time.Clock()
 
-	a = Rectangle(Vector2D(100,200), 50, 50, 0)
+	a = Rectangle(Vector2D(100,200), 50, 50)
 
 	font = pygame.font.SysFont("monospace", 30)
 
@@ -96,27 +110,15 @@ def test():
 			if event.type == pygame.QUIT:
 				pygame.quit()
 				return
-			if event.type == pygame.MOUSEBUTTONDOWN:
-				if event.button == 4:
-					b.scale(1.1)
-				if event.button == 5:
-					b.scale(1/1.1)
 
 		screen.fill((255,255,255))
 
-
 		renderOBB(a, screen)
-		renderOBB(b, screen)
-		renderOBB(c, screen)
 		
-		b.rotate(6.0/realfps)
-		b.update_center(Vector2D.from_list(pygame.mouse.get_pos()))
-
-		text = font.render(str(rr_collides(a,b)), True, (0,0,0))
-		screen.blit(text, [600/2-text.get_rect().width/2, 50])
-
-		text = font.render(str(rr_collides(b,c)), True, (0,0,0))
-		screen.blit(text, [600/2-text.get_rect().width/2, 100])
+		if pygame.mouse.get_pressed()[0]:
+			pos = Vector2D.from_list(pygame.mouse.get_pos())
+			a.apply_impulse((pos - a.center)/realfps)
+		a.update_physics()
 
 		text = font.render(str(duration-frames), True, (0,0,0))
 		screen.blit(text, [0,0])
@@ -131,5 +133,5 @@ def test():
 
 	pygame.quit()
 
-if __name__ == 'main':
+if __name__ == '__main__':
 	test()
