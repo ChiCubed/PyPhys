@@ -1,4 +1,4 @@
-from math import sin, cos, radians, sqrt
+from math import sin, cos, atan2, degrees, radians, sqrt
 
 def det(a, b):
 	return a[0] * b[1] - a[1] * b[0]
@@ -85,7 +85,10 @@ class Vector2D(object):
 		return self.__sub__(other)
 
 	def __mul__(self, other):
-		return Vector2D(self.x * other, self.y * other)
+		if isinstance(other, Vector2D):
+			return Vector2D(self.x * other.x, self.y * other.y)
+		else:
+			return Vector2D(self.x * other, self.y * other)
 
 	def __rmul__(self, other):
 		return self.__mul__(other)
@@ -156,6 +159,21 @@ class Vector2D(object):
 
 	def magnitude(self):
 		return sqrt(self.x**2 + self.y**2)
+
+	def angle(self, other=None):
+		"""
+		Gets clockwise angle
+		"""
+		if other is None:
+			angle = degrees(90 - atan2(self.y, self.x))
+			if angle < 0:
+				angle += 360
+			return 360 - angle
+
+		angle = degrees(atan2(other.y, other.x) - atan2(self.y, self.x))
+		if angle < 0:
+			angle += 360
+		return 360 - angle
 
 	def normalize_ip(self):
 		mag = self.magnitude()
