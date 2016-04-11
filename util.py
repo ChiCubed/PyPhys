@@ -395,7 +395,7 @@ def test():
 	realfps = FPS
 	while frames < duration:
 		def renderOBB(obb, screen):
-			pygame.draw.lines(screen, (0,0,0), True, map(list,obb.p))
+			pygame.draw.lines(screen, (0,0,0), True, map(list,obb))
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
