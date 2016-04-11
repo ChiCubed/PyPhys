@@ -1,5 +1,27 @@
 from math import sin, cos, radians, sqrt
 
+def det(a, b):
+	return a[0] * b[1] - a[1] * b[0]
+
+def sign(x):
+	if x == 0:
+		return 0
+	elif x > 0:
+		return 1
+	else:
+		return -1
+
+def on_seg(p, q, r):
+	return (q[0] <= max(p[0], r[0]) and q[0] >= min(p[0], r[0]) and
+			q[1] <= max(p[1], r[1]) and q[1] >= min(p[1], r[1]))
+
+def point_area(a, b, c):
+	return ((b[1] - a[1]) * (c[0] - b[0]) -
+			(b[0] - a[0]) * (c[1] - b[1]))
+
+def orientation(a, b, c):
+	return sign(point_area(a, b, c))
+
 class Vector2D(object):
 	def __init__(self, x=0.0, y=0.0):
 		self.x = x
@@ -149,16 +171,16 @@ class Line(object):
 		self.p1 = p1
 		self.p2 = p2
 
-	def intersect(self, other):
+	def __iter__(self):
+		return iter([p1,p2])
+
+	def intersection(self, other):
 		"""
 		Returns point of intersection of two lines.
 		Returns None if lines do not intersect.
 		"""
 		dx = (self.p1.x - self.p2.x, other.p1.x - other.p2.x)
 		dy = (self.p1.y - self.p2.y, other.p1.y - other.p2.y)
-		
-		def det(a, b):
-			return a[0] * b[1] - a[1] * b[0]
 
 		div = det(dx, dy)
 		if div == 0:
@@ -169,24 +191,17 @@ class Line(object):
 		y = det(d, dy) / float(div)
 		return Vector2D(x, y)
 
-	def intersect_fast(self, other):
+	def intersects(self, other):
 		"""
 		Returns True if lines intersect
 		False otherwise
 		http://www.geeksforgeeks.org/check-if-two-given-line-segments-intersect/
 		"""
-		def on_seg(p, q, r):
-			return (q.x <= max(p.x, r.x) and q.x >= min(p.x, r.x) and
-					q.y <= max(p.y, r.y) and q.y >= min(p.y, r.y))
 
-		def area(a, b, c):
-			return ((b.x - a.x) * (c.y - a.y) -
-					(c.x - a.x) * (b.y - a.y))
-
-		o1 = area(self.p1, self.p2, other.p1)
-		o2 = area(self.p1, self.p2, other.p2)
-		o3 = area(other.p1, other.p2, self.p1)
-		o4 = area(other.p1, other.p2, self.p2)
+		o1 = orientation(self.p1, self.p2, other.p1)
+		o2 = orientation(self.p1, self.p2, other.p2)
+		o3 = orientation(other.p1, other.p2, self.p1)
+		o4 = orientation(other.p1, other.p2, self.p2)
 
 		return ((o1 != o2 and o3 != o4) or (o1 == 0 and on_seg(self.p1, other.p1, self.p2)) or
 										   (o2 == 0 and on_seg(self.p1, other.p2, self.p2)) or
@@ -196,10 +211,10 @@ class Line(object):
 class OBB2D(object):
 	# Credit to:
 	# http://www.flipcode.com/archives/2D_OBB_Intersection.shtml
-	def __init__(self, center, w, h, angle):
+	def __init__(self, center, w, h, angle = 0):
 		self.center = center
-		self.w = w
-		self.h = h
+		self.w = w * 1.0
+		self.h = h * 1.0
 
 		self.update_angle(angle)
 
@@ -211,15 +226,6 @@ class OBB2D(object):
 
 	def rotate(self, angle):
 		self.update_angle(self.angle + angle)
-
-	def translate(self, center):
-		self.update_center(center+self.center)
-
-	def update_size(self, w, h):
-		self.w = w
-		self.h = h
-
-		self.update_axes()
 
 	def update_angle(self, angle):
 		self.angle = angle % 360
@@ -238,12 +244,24 @@ class OBB2D(object):
 
 		self.update_axes()
 
+	def translate(self, vector):
+		self.update_center(vector+self.center)
+
 	def update_center(self, center):
 		translate = center - self.center
 		for i in xrange(4):
 			self.p[i] += translate
 
 		self.center = center
+
+	def scale(self, scale):
+		self.update_size(self.w * scale, self.h * scale)
+
+	def update_size(self, w, h):
+		self.w = w
+		self.h = h
+
+		self.update_axes()
 
 	def update_axes(self):
 		# axis are two edges of
@@ -254,7 +272,9 @@ class OBB2D(object):
 		self.origin = [0,0]
 
 		for i in xrange(2):
-			self.axis[i] = self.axis[i] / (self.axis[i].squared_magnitude()*1.0)
+			sm = self.axis[i].squared_magnitude()*1.0
+			if sm:
+				self.axis[i] = self.axis[i] / sm
 			self.origin[i] = self.p[0].dot(self.axis[i])
 
 	def overlaps(self, other):
@@ -295,8 +315,8 @@ def oo_collides(rect1, mask1, rect2, mask2):
 def ro_collides(rect1, rect2, mask):
 	"""
 	Collision
-	between an OBB and a
-	pixel perfect object.
+	between an OBB and
+	a pixel perfect object.
 	"""
 
 def rr_collides(rect1, rect2):
@@ -309,8 +329,15 @@ def rr_collides(rect1, rect2):
 def lo_collides(line, rect, mask):
 	"""
 	Collision
-	between a line and a
-	pixel perfect object.
+	between a line and
+	a pixel perfect object.
+	"""
+
+def lr_collides(line, rect):
+	"""
+	Collision
+	between a line and
+	an OBB.
 	"""
 
 def ll_collides(line1, line2):
@@ -320,11 +347,33 @@ def ll_collides(line1, line2):
 	"""
 	return line1.intersects(line2)
 
-def lr_collides(line, rect):
+def co_collides(circle, rect, mask):
 	"""
 	Collision
-	between a line and an OBB.
+	between a circle and
+	a pixel perfect object.
 	"""
+
+def cr_collides(circle, rect):
+	"""
+	Collision
+	between a circle and
+	an OBB.
+	"""
+
+def cl_collides(circle, line):
+	"""
+	Collision
+	between a circle and
+	a line.
+	"""
+
+def cc_collides(circle1, circle2):
+	"""
+	Collision
+	between two circles.
+	"""
+	return circle1.intersects(circle2)
 
 def test():
 	import pygame
@@ -340,9 +389,11 @@ def test():
 
 	font = pygame.font.SysFont("monospace", 30)
 
+	duration = 20 * FPS
+
 	frames = 0
 	realfps = FPS
-	while frames < 2400:
+	while frames < duration:
 		def renderOBB(obb, screen):
 			pygame.draw.lines(screen, (0,0,0), True, map(list,obb.p))
 
@@ -352,11 +403,12 @@ def test():
 				return
 			if event.type == pygame.MOUSEBUTTONDOWN:
 				if event.button == 4:
-					b.update_size(b.w + 2, b.h + 2)
+					b.scale(1.1)
 				if event.button == 5:
-					b.update_size(b.w - 2, b.h - 2)
+					b.scale(1/1.1)
 
 		screen.fill((255,255,255))
+
 
 		renderOBB(a, screen)
 		renderOBB(b, screen)
@@ -371,11 +423,15 @@ def test():
 		text = font.render(str(rr_collides(b,c)), True, (0,0,0))
 		screen.blit(text, [600/2-text.get_rect().width/2, 100])
 
+		text = font.render(str(duration-frames), True, (0,0,0))
+		screen.blit(text, [0,0])
+
 		pygame.display.flip()
 		clock.tick(FPS)
 		realfps = clock.get_fps()
 		if realfps == 0:
 			realfps = FPS
+		print realfps
 		frames += 1
 
 	pygame.quit()
