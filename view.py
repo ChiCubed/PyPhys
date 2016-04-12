@@ -76,8 +76,6 @@ class Camera(object):
 		"""
 		self.mousevals.update(mousevals)
 
-	def getMousePos(self):
-		return pygame.mouse.get_pos()
 
 	def posToPygame(self, pos):
 		return (int((pos[0] - self.pos.x) * self.zoom + self.w / 2), \

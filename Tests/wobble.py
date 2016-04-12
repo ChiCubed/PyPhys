@@ -1,17 +1,15 @@
 import os
 import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__)))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 
-import pygame
-from PyPhys import *
-from PyPhys.util import Vector2D
+from view import *
 
 def dragBox(box, cam):
-	pos = cam.posFromPygame(cam.getMousePos())
-	box.apply_impulse((pos - box.center) / constants.FPS)
+	pos = cam.posFromPygame(pygame.mouse.get_pos())
+	box.apply_impulse((pos - box.center) / FPS)
 
-cam = display.Camera()
-a = geometry.Rectangle(Vector2D(0,0), 1, 1, 0)
+cam = Camera()
+a = Rectangle(Vector2D(0,0), 1, 1, 0)
 
 cam.addHandle("MOUSE", ("E", dragBox))
 cam.addMouseValue(0, a)
