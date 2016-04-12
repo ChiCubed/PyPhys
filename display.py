@@ -19,6 +19,8 @@ from constants import FPS
 from geometry import *
 import sys
 
+import thread
+
 class Camera(object):
 	def __init__(self, pos=Vector2D(0,0), zoom = 100, resizable = True, screen=None):
 		"""
@@ -41,12 +43,16 @@ class Camera(object):
 		self.pos = pos
 		self.zoom = zoom
 
+		self.cinematic = False
+
 		# What a great idea
 		self.handles = {pygame.QUIT: ("I", self.quit),
 						pygame.VIDEORESIZE: ("I", self.handleResize)
 						}
 		self.keyvals = {}
 		self.mousevals = {}
+
+		self.toRunEveryFrame = []
 
 	def addHandle(self, key, value):
 		self.handles[key] = value
@@ -88,10 +94,39 @@ class Camera(object):
 						(self.h/2.0 - pos[1])/self.zoom + self.pos.y)
 
 	def lengthToPygame(self, length):
-		return length * self.zoom
+		return int(length * self.zoom)
 
 	def lengthFromPygame(self, length):
 		return length / (self.zoom * 1.0)
+
+	def runInBackground(self, func, args):
+		thread.start_new_thread(func, tuple(args))
+
+	def enableCinematic(self):
+		self.cinematic = True
+
+	def disableCinematic(self):
+		self.cinematic = False
+
+	def runEveryFrame(self, func, args, numframes, final = None, finalArgs = ()):
+		self.toRunEveryFrame.append([func, args, 0, numframes, final, finalArgs])
+
+	def evalTimedFunc(self, index):
+		info = self.toRunEveryFrame[index]
+		if (info[2] == info[3] - 1) and info[4] is not None:
+			info[4](*info[5])
+
+		newargs = []
+		for e in info[1]:
+			if e == "frame":
+				newargs.append(info[2])
+			elif e == "numframes":
+				newargs.append(info[3])
+			else:
+				newargs.append(e)
+		info[0](*newargs)
+
+		info[2] += 1
 
 	def manageHandles(self):
 		for event in pygame.event.get():
@@ -135,10 +170,31 @@ class Camera(object):
 		self.screen.fill(pygame.color.THECOLORS['white'])
 		for body in bodies:
 			self.draw(body)
+
+		for i in xrange(len(self.toRunEveryFrame)):
+			self.evalTimedFunc(i)
+		# Clean up the expired ones
+		self.toRunEveryFrame = [i for i in self.toRunEveryFrame if i[2] < i[3]]
+
 		pygame.display.flip()
 		self.clock.tick(FPS)
 
+	def contains(self, body):
+		if isinstance(body, Circle):
+			return ((body.center.x + body.r > self.pos.x - (self.w*0.5 / self.zoom)) and
+					(body.center.x - body.r < self.pos.x + (self.w*0.5 / self.zoom)) and
+					(body.center.y + body.r > self.pos.y - (self.h*0.5 / self.zoom)) and
+					(body.center.y - body.r < self.pos.y + (self.h*0.5 / self.zoom)))
+		if isinstance(body, Rectangle):
+			return ((body.minBounds.center.x + body.minBounds.w > self.pos.x - (self.w*0.5 / self.zoom)) and
+					(body.minBounds.center.x - body.minBounds.w < self.pos.x + (self.w*0.5 / self.zoom)) and
+					(body.minBounds.center.y + body.minBounds.h > self.pos.y - (self.h*0.5 / self.zoom)) and
+					(body.minBounds.center.y - body.minBounds.h < self.pos.y + (self.h*0.5 / self.zoom)))
+
 	def draw(self, body):
+		if not self.contains(body):
+			print "OUTSIDE"
+			return
 		if isinstance(body, Circle):
 			pygame.draw.circle(self.screen, pygame.color.THECOLORS['black'], \
 				self.posToPygame(body.center), self.lengthToPygame(body.r))
@@ -147,22 +203,20 @@ class Camera(object):
 				map(self.posToPygame, body))
 
 	def translate(self, vector):
-		self.pos += vector
+		if not self.cinematic:
+			self.pos += vector
 
 	def translateRelative(self, vector):
-		self.pos += Vector2D.from_list(vector) / self.zoom
-
-	def update_position(self, position):
-		self.pos = position
+		if not self.cinematic:
+			self.pos += Vector2D.from_list(vector) / self.zoom
 
 	def scaleLinear(self, amount):
-		self.zoom += amount
+		if not self.cinematic:
+			self.zoom += amount
 
 	def scale(self, amount):
-		self.zoom *= amount
-
-	def update_scale(self, scale):
-		self.zoom = scale
+		if not self.cinematic:
+			self.zoom *= amount
 
 	def quit(self, event = None):
 		pygame.quit()

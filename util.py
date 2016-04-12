@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from math import sin, cos, atan2, degrees, radians, sqrt
+from math import sin, cos, atan2, degrees, radians, sqrt, pi
 
 def det(a, b):
 	return a[0] * b[1] - a[1] * b[0]
@@ -179,16 +179,6 @@ class Vector2D(object):
 	def magnitude(self):
 		return sqrt(self.x**2 + self.y**2)
 
-	def reflect_ip(self, other):
-		"""
-		Reflects self about other.
-		Other must be normalized.
-		"""
-		self -= 2*(self.dot(other))*other
-
-	def reflect(self, other):
-		return self - 2*(self.dot(other))*other
-
 	def angle(self, other=None):
 		"""
 		Gets clockwise angle
@@ -203,6 +193,41 @@ class Vector2D(object):
 		if angle < 0:
 			angle += 360
 		return 360 - angle
+
+	def interpolate_ip(self, other, amt, method="linear"):
+		"""
+		amt is 0 to 1, and represents interpolation
+		amt*100 percent of the way between the vectors.
+		method describes speed and does not
+		vary the trajectory at all.
+		"""
+		if method == "linear":
+			self.x, self.y = (self.x + amt * (other.x - self.x),
+							  self.y + amt * (other.y - self.y))
+		elif method == "cosine":
+			amt2 = (1 - cos(amt*pi)) * 0.5
+			self.x, self.y = (self.x * (1-amt2) + other.x * amt2,
+							  self.y * (1-amt2) + other.y * amt2)
+
+	def interpolate(self, other, amt, method="linear"):
+		if method == "linear":
+			return Vector2D(self.x + amt * (other.x - self.x),
+							self.y + amt * (other.y - self.y))
+		elif method == "cosine":
+			amt2 = (1 - cos(amt*pi)) * 0.5
+			return Vector2D(self.x * (1-amt2) + other.x * amt2,
+							self.y * (1-amt2) + other.y * amt2)
+
+
+	def reflect_ip(self, other):
+		"""
+		Reflects self about other.
+		Other must be normalized.
+		"""
+		self -= 2*(self.dot(other))*other
+
+	def reflect(self, other):
+		return self - 2*(self.dot(other))*other
 
 	def normalize_ip(self):
 		mag = self.magnitude()
@@ -255,6 +280,37 @@ class Line(object):
 										   (o3 == 0 and on_seg(other.p1, self.p1, other.p2)) or
 										   (o4 == 0 and on_seg(other.p1, self.p2, other.p2)))
 
+class AABB2D(object):
+	def __init__(self, center, w, h):
+		"""
+		Note that w, h are
+		EXTENTS and are in
+		fact half of the
+		equivalents in an
+		OBB2D
+		For example,
+		OBB2D(Vector2D(0,0), 1, 1)
+		is equivalent to
+		AABB2D(Vector2D(0,0), 0.5, 0.5)
+		"""
+		self.center = center
+		self.w = w
+		self.h = h
+
+	@classmethod
+	def fromOBB(cls, obb):
+		minx = obb[0].x
+		miny = obb[0].y
+		for p in obb:
+			if p.x < minx:
+				minx = p.x
+			if p.y < miny:
+				miny = p.y
+		return cls(obb.center, obb.center.x - minx, obb.center.y - miny)
+
+	def intersects(self, other):
+		diff = other.center 
+
 class OBB2D(object):
 	# Credit to:
 	# http://www.flipcode.com/archives/2D_OBB_Intersection.shtml
@@ -300,13 +356,14 @@ class OBB2D(object):
 			self.p[i] += translate
 
 		self.center = center
+		self.minBounds.center = center
 
 	def scale(self, scale):
 		self.update_size(self.w * scale, self.h * scale)
 
 	def update_size(self, w, h):
-		self.w = w
-		self.h = h
+		self.w = w * 1.0
+		self.h = h * 1.0
 
 		self.update_axes()
 
@@ -323,6 +380,8 @@ class OBB2D(object):
 			if sm:
 				self.axis[i] = self.axis[i] / sm
 			self.origin[i] = self.p[0].dot(self.axis[i])
+
+		self.minBounds = AABB2D.fromOBB(self)
 
 	def overlaps(self, other):
 		"""
