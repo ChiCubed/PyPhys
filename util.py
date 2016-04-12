@@ -173,6 +173,16 @@ class Vector2D(object):
 	def magnitude(self):
 		return sqrt(self.x**2 + self.y**2)
 
+	def reflect_ip(self, other):
+		"""
+		Reflects self about other.
+		Other must be normalized.
+		"""
+		self -= 2*(self.dot(other))*other
+
+	def reflect(self, other):
+		return self - 2*(self.dot(other))*other
+
 	def angle(self, other=None):
 		"""
 		Gets clockwise angle

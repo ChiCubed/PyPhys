@@ -32,7 +32,7 @@ class Camera(object):
 		if screen is None:
 			screen = pygame.display.get_surface()
 			if screen is None:
-				screen = pygame.display.set_mode((960, 540))
+				screen = pygame.display.set_mode((800, 600))
 		self.screen = screen
 		self.clock = pygame.time.Clock()
 		self.pos = pos
