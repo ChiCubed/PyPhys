@@ -98,7 +98,10 @@ class Vector2D(object):
 			return Vector2D(self.x - other, self.y - other)
 
 	def __rsub__(self, other):
-		return self.__sub__(other)
+		try:
+			return Vector2D(other[0] - self.x, other[1] - self.y)
+		except:
+			return Vector2D(other - self.x, other - self.y)
 
 	def __mul__(self, other):
 		return Vector2D(self.x * other, self.y * other)
@@ -120,6 +123,9 @@ class Vector2D(object):
 
 	def __iter__(self):
 		return iter([self.x, self.y])
+
+	def __neg__(self):
+		return Vector2D(-self.x, -self.y)
 
 	def rotate_ip(self, angle):
 		"""

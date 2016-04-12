@@ -16,7 +16,9 @@
 
 from math import sqrt
 from util import *
-from constants import PIXELS_PER_METRE, WORLD_DENSITY, GRAVITY, FPS
+from constants import FPS
+
+WORLD_DENSITY = 1.204 # Air in kg/m^3, used as kg/m^2. Temporary
 
 class Circle(object):
 	def __init__(self, center, r, dynamic=True):
@@ -140,52 +142,3 @@ class OneWayPlatform(object):
 	def update_normal(self):
 		self.normal = self.angle.rotated(90)
 		self.normal.normalize_ip()
-
-def test():
-	import pygame
-	from constants import FPS
-
-	pygame.init()
-	screen = pygame.display.set_mode((800,600))
-	clock = pygame.time.Clock()
-
-	a = Rectangle(Vector2D(1,2), 1, 1, 0)
-
-	font = pygame.font.SysFont("monospace", 30)
-
-	duration = 60 * FPS
-
-	frames = 0
-	realfps = FPS
-	while frames < duration:
-		def renderOBB(obb, screen):
-			pygame.draw.polygon(screen, (0,0,0), map(list, map(lambda x: Vector2D(2*x.x*PIXELS_PER_METRE,600) - (x * PIXELS_PER_METRE), obb)))
-
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT:
-				pygame.quit()
-				return
-
-		screen.fill((255,255,255))
-
-		renderOBB(a, screen)
-		
-		if pygame.mouse.get_pressed()[0]:
-			pos = (Vector2D(2*pygame.mouse.get_pos()[0],600) - Vector2D.from_list(pygame.mouse.get_pos())) / PIXELS_PER_METRE
-			a.apply_impulse((pos - a.center)/20)
-		a.update_physics()
-
-		text = font.render(str(duration-frames), True, (0,0,0))
-		screen.blit(text, [0,0])
-
-		pygame.display.flip()
-		clock.tick(FPS)
-		realfps = clock.get_fps()
-		if realfps == 0:
-			realfps = FPS
-		frames += 1
-
-	pygame.quit()
-
-if __name__ == '__main__':
-	test()

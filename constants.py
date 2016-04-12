@@ -14,11 +14,4 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from util import Vector2D
-
-PIXELS_PER_METRE = 100
-GRAVITY = Vector2D(0,-9.81)
-
-WORLD_DENSITY = 1.204 # Air
-
 FPS = 60.0
