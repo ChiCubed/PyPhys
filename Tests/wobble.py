@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath
 
 from PyPhys import *
 from PyPhys.util import Vector2D
+import pygame
 
 def dragBox(box, cam):
 	pos = cam.posFromPygame(cam.getMousePos())
