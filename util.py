@@ -1,3 +1,19 @@
+# util.py - Contains a bunch of physics calculations and low-level objects.
+# Copyright (C) 2016  Albert Smith
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from math import sin, cos, atan2, degrees, radians, sqrt
 
 def det(a, b):
@@ -85,10 +101,7 @@ class Vector2D(object):
 		return self.__sub__(other)
 
 	def __mul__(self, other):
-		if isinstance(other, Vector2D):
-			return Vector2D(self.x * other.x, self.y * other.y)
-		else:
-			return Vector2D(self.x * other, self.y * other)
+		return Vector2D(self.x * other, self.y * other)
 
 	def __rmul__(self, other):
 		return self.__mul__(other)
@@ -103,7 +116,7 @@ class Vector2D(object):
 		return "(%.5f, %.5f)" % (self.x, self.y)
 
 	def __nonzero__(self):
-		return self.x or self.y
+		return self.x != 0 or self.y != 0
 
 	def __iter__(self):
 		return iter([self.x, self.y])
@@ -165,7 +178,7 @@ class Vector2D(object):
 		Gets clockwise angle
 		"""
 		if other is None:
-			angle = degrees(90 - atan2(self.y, self.x))
+			angle = 90 - degrees(atan2(self.y, self.x))
 			if angle < 0:
 				angle += 360
 			return 360 - angle

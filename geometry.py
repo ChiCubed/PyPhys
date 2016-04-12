@@ -1,10 +1,22 @@
+# geometry.py - Defines physics objects.
+# Copyright (C) 2016  Albert Smith
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from math import sqrt
 from util import *
-from constants import PIXELS_PER_METRE, WORLD_DENSITY
-
-# NOTE #
-# Throughout this entire program,
-# the inputs are defined in metres
+from constants import PIXELS_PER_METRE, WORLD_DENSITY, GRAVITY, FPS
 
 class Circle(object):
 	def __init__(self, center, r, dynamic=True):
@@ -61,10 +73,10 @@ class Rectangle(OBB2D):
 		super(Rectangle, self).__init__(center, w, h, angle)
 		self.dynamic = dynamic
 
-		self.mass = mass
+		self.mass = mass # kg
 		self.calculate_density()
 
-		self.velocity = Vector2D(0,0)
+		self.velocity = Vector2D(0,0) # m/s
 
 	def calculate_density(self):
 		# Calculates density
@@ -78,10 +90,10 @@ class Rectangle(OBB2D):
 		# which is close enough
 		# for pretty much any
 		# intent and purpose
-		Cd = 1.05
+		Cd      = 1.05
 
 		# Accurate enough
-		area  = (self.w + self.h) / 2
+		area    = (self.w + self.h) / 2
 		density = WORLD_DENSITY
 
 		return Cd * density * self.velocity.squared_magnitude() * area * 0.5
@@ -89,7 +101,12 @@ class Rectangle(OBB2D):
 	def apply_impulse(self, impulse):
 		if not self.dynamic:
 			return
-		self.velocity += impulse
+		# Impulse = m (v-u)
+		# v-u = Impulse / m
+		# v = (Impulse / m) + u
+		# where u is starting
+		# velocity
+		self.velocity += (impulse / self.mass)
 
 	def update_physics(self):
 		if not self.dynamic:
@@ -97,7 +114,15 @@ class Rectangle(OBB2D):
 		self.translate(self.velocity)
 
 		drag = self.calculate_drag()
-		self.velocity /= 1.05 # Brute force coefficient
+		# Note: F = ma
+		# so drag = mass * acceleration
+		# so acceleration = drag / mass
+
+		acceleration = 0 # GRAVITY / FPS
+		self.velocity += acceleration
+		self.velocity *= 0.9 # Temporary drag hack
+		# acceleration = Vector2D.from_angle(self.velocity.angle(), -drag / self.mass)
+		# self.velocity += acceleration
 
 class OneWayPlatform(object):
 	def __init__(self, p1, p2, dynamic=False):
@@ -124,17 +149,17 @@ def test():
 	screen = pygame.display.set_mode((800,600))
 	clock = pygame.time.Clock()
 
-	a = Rectangle(Vector2D(1,2), .5, .5, 0)
+	a = Rectangle(Vector2D(1,2), 1, 1, 0)
 
 	font = pygame.font.SysFont("monospace", 30)
 
-	duration = 20 * FPS
+	duration = 60 * FPS
 
 	frames = 0
 	realfps = FPS
 	while frames < duration:
 		def renderOBB(obb, screen):
-			pygame.draw.lines(screen, (0,0,0), True, map(list, map(lambda x: Vector2D(2*x.x*PIXELS_PER_METRE,600) - (x * PIXELS_PER_METRE), obb)))
+			pygame.draw.polygon(screen, (0,0,0), map(list, map(lambda x: Vector2D(2*x.x*PIXELS_PER_METRE,600) - (x * PIXELS_PER_METRE), obb)))
 
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT:
@@ -147,7 +172,7 @@ def test():
 		
 		if pygame.mouse.get_pressed()[0]:
 			pos = (Vector2D(2*pygame.mouse.get_pos()[0],600) - Vector2D.from_list(pygame.mouse.get_pos())) / PIXELS_PER_METRE
-			a.apply_impulse((pos - a.center)/realfps)
+			a.apply_impulse((pos - a.center)/20)
 		a.update_physics()
 
 		text = font.render(str(duration-frames), True, (0,0,0))
